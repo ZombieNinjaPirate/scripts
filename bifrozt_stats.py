@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+"""This script allows you to extract data sets from the HonSSH log files. """
 
 """
 Copyright (c) 2014, Are Hansen - Honeypot Development.
@@ -38,17 +39,18 @@ import sys
 from Bifrozt.FileProcessing.Read import filelines
 from Bifrozt.Find.Addresses import IPv4, IPv4part
 from Bifrozt.Find.Files import locate
-from Bifrozt.Count.Lists import element
+from Bifrozt.Find.LogData import startEnd
+from Bifrozt.Count.Lists import element, nrOfItems, uniqElements
 from Bifrozt.Find.IPgeo import cname
 from Bifrozt.HonSSH.DailyLogs import sourceIPv4, passwords, users, combos, access
 from Bifrozt.HonSSH.GEO import accessCC
-from Bifrozt.HonSSH.Output import source, origin, passwd, usrnames, combinations, foundlogin
+from Bifrozt.HonSSH.Output import source, origin, passwd, usrnames, combinations, foundlogin, summary
 
 
 def parse_args():
     """Defines the command line arguments. """
     hlog = '/opt/honssh/logs'
-    parser = argparse.ArgumentParser('Bifrozt data extraction script')
+    parser = argparse.ArgumentParser('Data extraction script')
 
     honssh = parser.add_argument_group('- HonSSH data')
     honssh.add_argument('-A', dest='access', help='Valid login found', action='store_true')
@@ -57,6 +59,7 @@ def parse_args():
     honssh.add_argument('-P', dest='passwd', help='Frequent passwords', action='store_true')
     honssh.add_argument('-U', dest='usrnam', help='Frequent usernames', action='store_true')
     honssh.add_argument('-C', dest='combos', help='Frequent combinations', action='store_true')
+    honssh.add_argument('-SUM', dest='summry', help='Print summary', action='store_true')
 
     search = parser.add_argument_group('- Show data based on a shared object')
     search.add_argument('-QP', dest='qpasswd', help='Show passwords used by IP or octet(s) in IP',
@@ -138,6 +141,28 @@ def process_args(args):
         gainaccess = access(loglines)
         geoipslook = accessCC(gainaccess)
         foundlogin(geoipslook, number)
+
+    if args.summry:
+        logstimed = startEnd(loglines, ',', 1)
+        attacknum = nrOfItems(loglines)
+        sourceips = sourceIPv4(loglines)
+        uniqueips = uniqElements(sourceips)
+        ipv4numbr = nrOfItems(uniqueips)
+        findcname = cname(sourceips)
+        countname = element(findcname, None)
+        countrynr = nrOfItems(countname.keys())
+        usedunames = users(loglines)
+        user_items = element(usedunames, None)
+        uniqusrnam = uniqElements(user_items)
+        usernamynr = nrOfItems(uniqusrnam)
+        usedpasswd = passwords(loglines)
+        pass_items = element(usedpasswd, None)
+        uniqpasswd = nrOfItems(pass_items.keys())
+        attemptedc = combos(loglines)
+        comb_items = element(attemptedc, None)
+        uniqcombos = nrOfItems(comb_items.keys())
+        summary(logstimed, attacknum, ipv4numbr, countrynr, 
+                usernamynr, uniqpasswd, uniqcombos)
 
     if args.qpasswd:
         searchdata = IPv4part(args.qpasswd, loglines)
