@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""This script allows you to extract data from the log files on Bifrozt. """
+"""This script allows you to extract data sets from the HonSSH log files. """
 
 """
 Copyright (c) 2014, Are Hansen - Honeypot Development.
@@ -44,29 +44,22 @@ def parse_args():
     parser = argparse.ArgumentParser('Bifrozt data mining')
 
     honssh = parser.add_argument_group('HonSSH data')
-    honssh.add_argument('-SUM', dest='summry', help='HonSSH summary', action='store_true')
     honssh.add_argument('-A', dest='access', help='Valid login found', action='store_true')
     honssh.add_argument('-S', dest='source', help='Connection/IP address', action='store_true')
     honssh.add_argument('-O', dest='origin', help='Connection/country', action='store_true')
     honssh.add_argument('-P', dest='passwd', help='Frequent passwords', action='store_true')
     honssh.add_argument('-U', dest='usrnam', help='Frequent usernames', action='store_true')
     honssh.add_argument('-C', dest='combos', help='Frequent combinations', action='store_true')
-    data = honssh.add_mutually_exclusive_group()
-    data.add_argument('-QP', dest='qpasswd', help='Show passwords used by IP or octet(s) in IP',
-                        nargs=1, type=str)
-    data.add_argument('-QU', dest='qusrnam', help='Show usernames used by IP or octet(s) in IP',
-                        nargs=1, type=str)
-    data.add_argument('-QC', dest='qcombos', help='Show combos used by IP or octet(s) in IP',
-                        nargs=1, type=str)
 
     fwlogs = parser.add_argument_group('Firewall data')
-    fwlogs.add_argument('-HTTP', dest='fwhttp', help='Show HTTP destinations', action='store_true')
     fwlogs.add_argument('-IRC', dest='fwirc', help='Show IRC destinations', action='store_true')
 
     logdirs = parser.add_argument_group('Log directories')
     logs = logdirs.add_mutually_exclusive_group()
     logs.add_argument('-HL', dest='hondir', help='HonSSH log directory', nargs=1)
     logs.add_argument('-FL', dest='fwldir', help='Firewall log directory', nargs=1)
+    logs.add_argument('-SUM', dest='summry', help='''Summary report. Requiers HonSSH log directory 
+                        and Firewall log directory''', nargs=2)
 
     out = parser.add_argument_group('Output control')
     out.add_argument('-n', dest='number', help='Number of lines displayed (default: 50)')
@@ -84,10 +77,8 @@ def process_args(args):
     if args.fwldir:
          firewallData(args)
 
-    if args.fwldir == None and args.hondir == None:
-        print 'ERROR: You have to specify a log directory!'
-        sys.exit(1)
-
+    if args.summry:
+        dataSummary(args)
 
 def main():
     """Main function of bifrozt_stats. """
