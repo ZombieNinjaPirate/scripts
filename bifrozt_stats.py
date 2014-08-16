@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""This script allows you to extract data sets from the HonSSH log files. """
+"""This script allows you to extract data sets from the HonSSH and firewall log files. """
 
 """
 Copyright (c) 2014, Are Hansen - Honeypot Development.
@@ -30,7 +30,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = 'Are Hansen'
 __date__ = '2014, May 15'
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 
 import argparse
