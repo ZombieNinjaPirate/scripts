@@ -211,35 +211,35 @@ def makerules(geo_list):
 
     for geo in geo_list:
 
+        # - Create a country specific directory
+        geodir = '{0}'.format(geo.split('.')[0])
+        os.mkdir(geodir)
+
         # - Read the ipranges from the file
         with open(geo, 'r') as infile:
             for line in infile.readlines():
                 # - append the ipranges to a DROP
                 drop.append('{0} {1} -j DROP'.format(inputstr, line.rstrip()))
-                #  - and ALLOW rule set
+                # - and ACCEPT rule set
                 accept.append('{0} {1} -j ACCEPT'.format(inputstr, line.rstrip()))
         infile.close()
 
         # - Use the drop list to generate the DROP rule set for the specific country
-        drop_file = 'DROP_{0}'.format(geo)
+        drop_file = '{0}/DROP'.format(geodir)
         with open(drop_file, 'w') as wdrop:
             for drule in drop:
                 wdrop.write('{0}\n'.format(drule))
         wdrop.close()
 
-        print '[+] Created {0}'.format(drop_file)
-
         # - Reset the DROP list
         drop = []
 
         # - Use the accept list to generate the ACCEPT rule set for the specific country
-        accept_file = 'ACCEPT_{0}'.format(geo)
+        accept_file = '{0}/ACCEPT'.format(geodir)
         with open(accept_file, 'w') as waccept:
             for arule in accept:
                 waccept.write('{0}\n'.format(arule))
         waccept.close()
-
-        print '[+] Created {0}'.format(accept_file)
 
         # - Reset the accept list
         accept = []
