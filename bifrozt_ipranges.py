@@ -32,7 +32,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = 'Are Hansen - Honeypot Development'
 __date__ = '2014, August 12'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 import argparse
@@ -46,6 +46,7 @@ import zipfile
 
 def parse_args():
     """Defines the command line arguments. """
+    bzsupport = '/var/bzsupport/inetnum_by_country'
     appname = sys.argv[0].split('/')[-1]
     
     parser = argparse.ArgumentParser(
@@ -77,9 +78,8 @@ def parse_args():
     ).format(appname, __version__, __author__, __date__)
     )
 
-    bzsupport = '/var/bzsupport/inetnum_by_country'
     outdir = parser.add_argument_group('Output directory')
-    outdir.add_argument('-O', dest='outdir', help='Output directory (default: {0})'.format(bzsupport),
+    outdir.add_argument('-O', dest='outdir', help='Output directory ({0})'.format(bzsupport),
                         default=bzsupport)
     
     args = parser.parse_args()
@@ -152,7 +152,8 @@ def findcountry(lines):
 
 
 def countryrange(countries, lines):
-    """Creates a dictionary where the country name is the key and its network ranges is the values. """
+    """Creates a dictionary where the country name is the key and its network ranges is the values. 
+    """
     country_dict = {}
     country_ranges = []
 
@@ -185,8 +186,6 @@ def printresults(ccrng_dict, outdir):
         
             country_file.close()
 
-    print '[+] DONE!'
-
 
 def locate(filepath, filename):
     """Add all the country specific files to the file_list and return it. """
@@ -204,18 +203,24 @@ def locate(filepath, filename):
 
 
 def makerules(geo_list):
-    """Create ALLOW and DROP files. """
+    """Create ACCEPT and DROP files from the files in the geo_list, these files are deleted after
+    being parsed. """
+    inputstr = '-A INPUT -i eth0 -m iprange --src-range'
     accept = []
     drop = []
 
     for geo in geo_list:
 
+        # - Read the ipranges from the file
         with open(geo, 'r') as infile:
             for line in infile.readlines():
-                drop.append('-A INPUT -i eth0 -m iprange --src-range {0} -j DROP'.format(line.rstrip()))
-                accept.append('-A INPUT -i eth0 -m iprange --src-range {0} -j ACCEPT'.format(line.rstrip()))
+                # - append the ipranges to a DROP
+                drop.append('{0} {1} -j DROP'.format(inputstr, line.rstrip()))
+                #  - and ALLOW rule set
+                accept.append('{0} {1} -j ACCEPT'.format(inputstr, line.rstrip()))
         infile.close()
 
+        # - Use the drop list to generate the DROP rule set for the specific country
         drop_file = 'DROP_{0}'.format(geo)
         with open(drop_file, 'w') as wdrop:
             for drule in drop:
@@ -224,8 +229,10 @@ def makerules(geo_list):
 
         print '[+] Created {0}'.format(drop_file)
 
+        # - Reset the DROP list
         drop = []
 
+        # - Use the accept list to generate the ACCEPT rule set for the specific country
         accept_file = 'ACCEPT_{0}'.format(geo)
         with open(accept_file, 'w') as waccept:
             for arule in accept:
@@ -234,7 +241,11 @@ def makerules(geo_list):
 
         print '[+] Created {0}'.format(accept_file)
 
+        # - Reset the accept list
         accept = []
+
+        # - Delete the original geo file
+        os.remove(geo)
 
 
 def process_args(args):
