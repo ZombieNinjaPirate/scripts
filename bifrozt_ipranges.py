@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 
-"""This script is used to generate iptables DROP rules based on the network range of a country. The
-network ranges are downloaded as a CSV file from http://www.maxmind.com."""
+"""This script is used to generate iptables DROP rules based on the network range of a 
+country. The network ranges are downloaded as a CSV file from http://www.maxmind.com."""
 
 
 """
@@ -10,24 +10,25 @@ Copyright (c) 2014, Are Hansen - Honeypot Development.
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are 
+permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, this list of conditions
-and the following disclaimer.
+1. Redistributions of source code must retain the above copyright notice, this list of 
+conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions
-and the following disclaimer in the documentation and/or other materials provided with the
-distribution.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of 
+conditions and the following disclaimer in the documentation and/or other materials 
+provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND AN EXPRESS OR
-IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND AN EXPRESS 
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
+TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
@@ -87,8 +88,8 @@ def parse_args():
 
 
 def fetchcsv():
-    """Downloads the latest GeoIPCountryCSV.zip from http://www.maxmind.com. Return the downloaded
-    zip file if download was succesfull. """
+    """Downloads the latest GeoIPCountryCSV.zip from http://www.maxmind.com. Return the 
+    downloaded zip file if download was succesfull. """
     # Remote file
     rfile = 'http://geolite.maxmind.com/download/geoip/database/GeoIPCountryCSV.zip'
     # Local file
@@ -123,7 +124,8 @@ def extractcsv(csvzip):
         zcsv.extractall('/tmp')
     zcsv.close()
 
-    print '[OKAY] - {0} extracted from {1}'.format(unzipped.split('/')[-1], csvzip.split('/')[-1])
+    print '[OKAY] - {0} extracted from {1}'.format(unzipped.split('/')[-1], 
+                                                   csvzip.split('/')[-1])
 
     # Retunr the CSV file.
     return unzipped
@@ -151,8 +153,8 @@ def readcsv(csvfile):
 
 
 def findcountry(lines):
-    """Using the csv_lines from the readcsv function, create a list element of each unique country
-    name. """
+    """Using the csv_lines from the readcsv function, create a list element of each unique
+    country name. """
     # List holding the country names.
     country_list = []
 
@@ -171,8 +173,9 @@ def findcountry(lines):
 
 
 def countryrange(countries, lines):
-    """Using the country_list from the findcountry function and the csv_lines from the readcsv
-    function, create a dictionary where country name is the key and its network ranges are values. 
+    """Using the country_list from the findcountry function and the csv_lines from the 
+    readcsv function, create a dictionary where country name is the key and its network 
+    ranges are values. 
     """
     # Dictionary for country-name:network-range
     country_dict = {}
@@ -231,8 +234,8 @@ def writeranges(ccrng_dict, outdir):
 
 
 def makerules(range_files):
-    """Using the output_files from the writeranges function, generate the iptables DROP rules. The 
-    DROP rules are created in country specific directories. """
+    """Using the output_files from the writeranges function, generate the iptables DROP 
+    rules. The DROP rules are created in country specific directories. """
     # First part if the iptables DROP rule.
     inputstr = '-A INPUT -m iprange --src-range'
     # List object that holds the DROP rules.
@@ -275,14 +278,14 @@ def process_args(args):
     # Check for outdir.
     if not os.path.isdir(args.outdir):
         # Print message and
-        print '[INFO] - {0} was not found, attempting to create {0} now.'.format(args.outdir)
+        print '[INFO] - {0} was not found, creating it {0} now.'.format(args.outdir)
         # attempt to create outdir.
         try:
             os.mkdir(args.outdir)
             print '[OKAY] - {0} was created.'.format(args.outdir)
         except OSError, ErrMSG:
             # Catch permission and path failures with error messages
-            print '[FAIL] - Attempt to create {0} returned with error:'.format(args.outdir)
+            print '[FAIL] - Creating {0} returned with error:'.format(args.outdir)
             print '\n\t{0}\n'.format(ErrMSG)
             # and terminate execution.
             sys.exit(1)
