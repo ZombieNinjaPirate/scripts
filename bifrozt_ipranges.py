@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-"""This script is used to extract the inetnum from the ripe.db.inetnum and build network ranges for 
-the different countries. """
+
+"""This script is used to generate iptables DROP rules based on the network range of a country. The
+network ranges are downloaded as a CSV file from http://www.maxmind.com."""
 
 
 """
@@ -32,7 +33,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = 'Are Hansen - Honeypot Development'
 __date__ = '2014, August 12'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 
 import argparse
@@ -46,7 +47,6 @@ import zipfile
 
 def parse_args():
     """Defines the command line arguments. """
-    bzsupport = '/var/bzsupport/inetnum_by_country'
     appname = sys.argv[0].split('/')[-1]
     
     parser = argparse.ArgumentParser(
@@ -56,31 +56,30 @@ def parse_args():
     '\t\t(C) {2}\n'
     '\t\t\t   {3}\n\n'
 
-    'This is one of the support scripts that are intended to be used on Bifrozt.\n'
+    'This script is intended to be used on Bifrozt\n'
+    '(http://sourceforge.net/projects/bifrozt/)\n\n'
+
     'When executed, this script will pull down the latest CSV file containing\n'
-    'all the latest network ranges for each country in the world.\n\n'
-
-    '  This CSV file is provided, free of charge, by http://www.maxmind.com\n\n'
-
-    'Once this file is downloaded and unzipped it will be parsed by the script\n'
-    'to find the IP ranges for each country. It will then look for the default\n'
-    'location on Bifrozt, in /var/bzsupport, and create country specific range\n'
-    'files. If the default location dont exists it will require the -O\n'
-    'argument. If the path given in -O dont exist it will be created.\n\n'
+    'all the network ranges for each country in the world.\n\n'
 
     'After the country specific files have been created, the script will create\n'
-    'one ALLOW and one DROP file for each country. These two files will contain\n'
-    'ready to use iptable rules that can be used to block or allow connections\n'
-    'to Bifrozt, depending on source address.\n\n'
+    'one file containing the iptables syntax for dropping all connections from\n'
+    'that speciffic country.\n\n'
 
-    'This will allow researchers and analysts to gather more fine grained data\n'
-    'about attacks and malware from a specific region/country.\n\n'
+    'Adding the DROP rules to the iptables will allow you to concentrate your\n'
+    'data collection to a certain region of the world.\n\n'
+
+    'MaxMind, the provider of the CSV file, updates the file on the first Tuesday\n'
+    'of each month. Which suggests that you should run this script once a month\n'
+    'to keep your DROP rules current.\n\n'
+
+    'This script uses GeoLite data created by MaxMind, available from:\n'
+    'http://www.maxmind.com\n\n'
     ).format(appname, __version__, __author__, __date__)
     )
 
     outdir = parser.add_argument_group('Output directory')
-    outdir.add_argument('-O', dest='outdir', help='Output directory ({0})'.format(bzsupport),
-                        default=bzsupport)
+    outdir.add_argument('-O', dest='outdir', help='Output directory.', required=True)
     
     args = parser.parse_args()
 
@@ -88,37 +87,45 @@ def parse_args():
 
 
 def fetchcsv():
-    """Downloads the latest GeoIPCountryCSV.zip from http://www.maxmind.com. """
+    """Downloads the latest GeoIPCountryCSV.zip from http://www.maxmind.com. Return the downloaded
+    zip file if download was succesfull. """
+    # Remote file
     rfile = 'http://geolite.maxmind.com/download/geoip/database/GeoIPCountryCSV.zip'
+    # Local file
     lfile = '/tmp/GeoIPCountryCSV.zip'
 
-    print '[-] Attempting to download {0}'.format(rfile)
+    # Attempt to download CSV file
+    print '[INFO] - Attempting to download {0}'.format(rfile)
     try:
+        # Download CSV into /tmp
         urllib.urlretrieve(rfile, lfile)
-        print '[+] Dowloaded {0}'.format(rfile.split('/')[-1])
-    except IOError:
-        print '[!] ERROR: Unable to fetch {0}'.format(rfile)
+        print '[OKAY] - Downloaded {0}'.format(rfile.split('/')[-1])
+    except IOError, ErrMSG:
+        # Catch errors and display error message
+        print '[FAIL] - Attempt to fetch {0} returned with error:'.format(rfile)
+        print '\n\t{0}\n'.format(ErrMSG)
+        # terminate execution.
         sys.exit(1)
 
+    # Return local file
     return lfile
 
 
 def extractcsv(csvzip):
     """Extracts the CSV from the zip archive. """
+    # Extracted file name.
     unzipped = '/tmp/GeoIPCountryWhois.csv'
 
-    print '[-] Extracting CSV from {0}'.format(csvzip)
+    print '[INFO] - Extracting CSV from {0}'.format(csvzip)
 
+    # Unzipp CSV.
     with zipfile.ZipFile(csvzip, 'r') as zcsv:
         zcsv.extractall('/tmp')
     zcsv.close()
 
-    print '[+] {0} was extracted from {1}'.format(unzipped.split('/')[-1], csvzip.split('/')[-1])
+    print '[OKAY] - {0} extracted from {1}'.format(unzipped.split('/')[-1], csvzip.split('/')[-1])
 
-    if not os.path.isfile(unzipped):
-        print '[!] ERROR: {0} dont appear to exist!!'.format(unzipped)
-        sys.exit(1)
-
+    # Retunr the CSV file.
     return unzipped
 
 
@@ -126,150 +133,178 @@ def readcsv(csvfile):
     """Reads the lines of the CSV file into a list which is returned from the function. """
     csv_lines = []
 
-    print '[-] Pasring {0}'.format(csvfile)
+    print '[INFO] - Parsing {0}'.format(csvfile)
 
+    # Make sure the CSV file exists before trying to parse it.
+    if not os.path.isfile(csvfile):
+        print '[FAIL] - ERROR: {0} dont appear to exist!!'.format(csvfile)
+        sys.exit(1)
+
+    # Read the lines from the CSV file into a list, nothing fancy.
     with open(csvfile, 'r') as csv:
         for line in csv.readlines():
             csv_lines.append(line)
-
     csv.close()
 
+    # Return the list of CSV lines
     return csv_lines
 
 
 def findcountry(lines):
-    """Create a list element of each unique country name. """
+    """Using the csv_lines from the readcsv function, create a list element of each unique country
+    name. """
+    # List holding the country names.
     country_list = []
 
-    print '[+] Finding country names...'
+    print '[INFO] - Extracting country names...'
     
+    # Itterate trough the lines
     for line in lines:
+        # and extract the country name.
         country = line.split('"')[-2]
+        # Append any country names thats not already present in the list.
         if country not in country_list:
             country_list.append(country)
 
+    # Return the country_list, alphabetically sorted.
     return sorted(country_list)
 
 
 def countryrange(countries, lines):
-    """Creates a dictionary where the country name is the key and its network ranges is the values. 
+    """Using the country_list from the findcountry function and the csv_lines from the readcsv
+    function, create a dictionary where country name is the key and its network ranges are values. 
     """
+    # Dictionary for country-name:network-range
     country_dict = {}
+    # List for network-range that's used as the value in country_dict
     country_ranges = []
 
-    print '[+] Gathering the network ranges for each country...'
+    print '[INFO] - Gathering the network ranges for each country...'
 
+    # Itterating trough the country names
     for name in countries:
+        # while also itterating trough the lines in the CSV file. 
         for line in lines:
+            # If the country name is matched with a line in the CSV file,
             if name in line:
-                inetrng = '{0}-{1}'.format(line.split('"')[1],  line.split('"')[3])
+                # reformat the network range to be accepted by iptables
+                inetrng = '{0}-{1}'.format(line.split('"')[1], line.split('"')[3])
+                # and append it to the country_ranges list.
                 country_ranges.append(inetrng)
 
+        # Create a dictonary object for that country, using the current country_ranges list 
         country_dict[name] = country_ranges
+        # and reset the country_ranges list once the dictionary object has been created.
         country_ranges = []
 
+    # Return country_dict.
     return country_dict
 
 
-def printresults(ccrng_dict, outdir):
-    """Prints the network range belonging to each country. """
-    print '[+] Writing the network ranges to separate files in {0}...'.format(outdir)
+def writeranges(ccrng_dict, outdir):
+    """Writes the country speciffic network ranges to separate files. """
+    # List object holding the country speciffic file names.
+    output_files = []
+
+    print '[INFO] - Writing the network ranges to separate files in {0}...'.format(outdir)
     
+    # Itterate trough the dictionary and
     for country, inetrng in ccrng_dict.items():
+        # replace any unfriendly characters in the country names before
         out = country.replace(' ', '_').replace('(', '').replace(')', '')
         txt = out.replace("'", '').replace(',', '').replace('/', '')
+        # declaring name of the output file.
         outfile = '{0}/{1}.txt'.format(outdir, txt)
 
+        # Create the output files
         with open(outfile, 'w') as country_file:
+            # and write the network ranges to them.
             for inet in inetrng:
                 country_file.write('{0}\n'.format(inet))
-        
             country_file.close()
 
+        # Append the country speciffic file name to the list.
+        output_files.append(outfile)
 
-def locate(filepath, filename):
-    """Add all the country specific files to the file_list and return it. """
-    file_list = []
-
-    os.chdir(filepath)
-    for files in glob.glob('*{0}'.format(filename)):
-        file_list.append('{0}'.format(files))
-
-    if len(file_list) == 0:
-        print 'ERROR: No files mathcing "{0}" found in "{1}"'.format(filepath, filename)
-        sys.exit(1)
-
-    return file_list
+    # Return the output_files list.
+    return output_files
 
 
-def makerules(geo_list):
-    """Create ACCEPT and DROP files from the files in the geo_list, these files are deleted after
-    being parsed. """
-    inputstr = '-A INPUT -i eth0 -m iprange --src-range'
-    accept = []
+def makerules(range_files):
+    """Using the output_files from the writeranges function, generate the iptables DROP rules. The 
+    DROP rules are created in country specific directories. """
+    # First part if the iptables DROP rule.
+    inputstr = '-A INPUT -m iprange --src-range'
+    # List object that holds the DROP rules.
     drop = []
 
-    for geo in geo_list:
-
-        # - Create a country specific directory
+    # Itterate trough the range files.
+    for geo in range_files:
+        # Create a country specific directory.
         geodir = '{0}'.format(geo.split('.')[0])
         os.mkdir(geodir)
 
-        # - Read the ipranges from the file
+        # Read the ipranges from the file,
         with open(geo, 'r') as infile:
             for line in infile.readlines():
-                # - append the ipranges to a DROP
+                # complete the iptales DROP rule and apend it to the drop list.
                 drop.append('{0} {1} -j DROP'.format(inputstr, line.rstrip()))
-                # - and ACCEPT rule set
-                accept.append('{0} {1} -j ACCEPT'.format(inputstr, line.rstrip()))
         infile.close()
 
-        # - Use the drop list to generate the DROP rule set for the specific country
+        # Declare the file output name.
         drop_file = '{0}/DROP'.format(geodir)
+
+        # Using the drop list,
         with open(drop_file, 'w') as wdrop:
             for drule in drop:
+                # write the DROP rules for the countries.
                 wdrop.write('{0}\n'.format(drule))
         wdrop.close()
 
-        # - Reset the DROP list
+        # Reset the DROP list.
         drop = []
 
-        # - Use the accept list to generate the ACCEPT rule set for the specific country
-        accept_file = '{0}/ACCEPT'.format(geodir)
-        with open(accept_file, 'w') as waccept:
-            for arule in accept:
-                waccept.write('{0}\n'.format(arule))
-        waccept.close()
-
-        # - Reset the accept list
-        accept = []
-
-        # - Delete the original geo file
+        # Delete the original file after the new one has been created.
         os.remove(geo)
+
+    print '[OKAY] - All the DROP rules have been generated!'
 
 
 def process_args(args):
     """Process the command line arguments. """
-    # download
+    # Check for outdir.
+    if not os.path.isdir(args.outdir):
+        # Print message and
+        print '[INFO] - {0} was not found, attempting to create {0} now.'.format(args.outdir)
+        # attempt to create outdir.
+        try:
+            os.mkdir(args.outdir)
+            print '[OKAY] - {0} was created.'.format(args.outdir)
+        except OSError, ErrMSG:
+            # Catch permission and path failures with error messages
+            print '[FAIL] - Attempt to create {0} returned with error:'.format(args.outdir)
+            print '\n\t{0}\n'.format(ErrMSG)
+            # and terminate execution.
+            sys.exit(1)
+
+    # Download
     getzip = fetchcsv()
-    # unzip
+    # Unzip
     unpack = extractcsv(getzip)
-    # read csv
+    # Read csv
     csvfil = readcsv(unpack)
-    # find countries
+    # Find countries
     contry = findcountry(csvfil)
-    # find ranges
+    # Find ranges
     ranges = countryrange(contry, csvfil)
-    # make country specific files
-    gentxt = printresults(ranges, args.outdir)
-    # find country specific files
-    getfil = locate(args.outdir, '.txt')
-    # make country specific iptable rules
-    genipt = makerules(getfil)
+    # Make country specific files
+    gentxt = writeranges(ranges, args.outdir)
+    # Make country specific iptable rules
+    genipt = makerules(gentxt)
 
 
 def main():
-    """Main function of bifrozt_stats. """
+    """Main. Its the Bozz function ofcoz ;)"""
     args = parse_args()
     process_args(args)
 
